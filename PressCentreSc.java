@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 @Controller
 @Component
 public class PressCentreSc {
-
+    private int Cid = 0; // 将Cid声明为成员变量
     @Autowired
     PressCentreService pressCentreService;
     public void scrapePressCentre() {
@@ -46,7 +46,7 @@ public class PressCentreSc {
 
 
             while (matcher.find()) {
-                int Cid = 0;
+
                 //是用来表示是企业还是政府govBid
                 int govBid = 1;
                 String param1 = matcher.group(1);
@@ -76,7 +76,7 @@ public class PressCentreSc {
 
             while (matcher2.find()) {
                 int corpBid= 1;
-                int Cid = 0;
+
                 String param2 = matcher2.group(1);
                 int param2Int = (Integer.parseInt(param2))-1;
                 // 构建企业信息的新链接
@@ -107,6 +107,9 @@ public class PressCentreSc {
         // 获取右侧标题
         String rightTitle = doc.select("div.right p.right-title").text();
         for (Element newsItem : newsItems) {
+
+            Cid++; // 递增成员变量Cid的值
+
             String title = newsItem.select("a.lf").text();
             String date = newsItem.select("span.rt").text();
             String relativeLink = newsItem.select("a.lf").attr("href");
@@ -195,7 +198,6 @@ public class PressCentreSc {
             articleContent = ccontentBuilder.toString().trim();
 
             PressCentreDao pressCentreDao = new PressCentreDao();
-            Cid++;
             pressCentreDao.setId(3);
             pressCentreDao.setName("新闻中心");
             pressCentreDao.setBname(category);
