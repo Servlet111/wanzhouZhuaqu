@@ -28,70 +28,100 @@ public class PressCentreSc {
          然后将这些对象添加到 dataList 中。最后，通过调用 shouyeService.saveBatch(dataList);
          方法，将 dataList 中的数据批量插入到数据库中，以完成数据持久化操作。*/
 
-        String baseUrl = "http://www.wz.gov.cn/jkq/wzjkq/xwzx/";
+        String baseUrl = "http://www.wz.gov.cn/jkq/wzjkq/xwzx/zwyw_106886/";
         // 政府信息的基础 URL
         String govBaseUrl = "http://www.wz.gov.cn/jkq/wzjkq/xwzx/zwyw_106886/";
 
         // 企业信息的基础 URL
         String corpBaseUrl = "http://www.wz.gov.cn/jkq/wzjkq/xwzx/qydt/";
         List<PressCentreDao> dataList = new ArrayList<>();
-
-        try {// 连接政府信息的 URL 并解析页面内容
-            Document govDoc = Jsoup.parse(new URL(govBaseUrl), 30000);
-            String govHtmlContent = govDoc.html();
-
-            // 使用正则表达式匹配createPage函数调用
-            Pattern pattern = Pattern.compile("createPage\\((\\d+)");
-            Matcher matcher = pattern.matcher(govHtmlContent);
-
-
-            while (matcher.find()) {
-
-                //是用来表示是企业还是政府govBid
-                int govBid = 1;
-                String param1 = matcher.group(1);
-                // 将param1字符串转换为整数
-                int param1Int = (Integer.parseInt(param1))-1;
-                // 构建政府信息的新链接
-                for (int i = 0; i <=param1Int; i++) {
-                    String govNewUrl;
-                    if (i == 0) {
-                        govNewUrl = govBaseUrl + "index.html"; // 当 i 为0时使用这个连接
+        try {
+            Document doc = Jsoup.parse(new URL(baseUrl), 30000);
+            // 选择指定<div>下的<a>标签
+            // 选择指定<div>下的所有<a>标签
+            Element divElement = doc.select("div.left").first();
+            Elements aElements = divElement.select("a");
+            // 遍历所有<a>标签，获取链接和文本内容
+            int Bid = 1;
+            String lastLink = baseUrl; // 用于保存上一个链接
+            for (Element link : aElements) {
+                String href = link.attr("href");
+                String text = link.text();
+                System.out.println("链接: " + href);
+                System.out.println("文本内容: " + text);
+                // 处理链接
+                String newHref;
+                // 处理第一个链接，将 "./" 替换为空字符串
+                if (Bid == 1) {
+                    newHref = lastLink + href.replace("./", "");
+                } else {
+                    // 找到 baseUrl 中倒数第二个斜杠的位置
+                    int lastSlashIndex = baseUrl.lastIndexOf("/", baseUrl.length() - 2);
+                    if (lastSlashIndex != -1) {
+                        // 删除 baseUrl 中倒数第二个斜杠之后的内容
+                        String baseUrlWithoutLastSegment = baseUrl.substring(0, lastSlashIndex + 1);
+                        // 将 "../" 替换为 "/"
+                        newHref = baseUrlWithoutLastSegment + href.replace("../", "");
                     } else {
-                        govNewUrl = govBaseUrl + "index_" + i + ".html";
+                        // 如果没有倒数第二个斜杠，直接使用 href
+                        newHref = href;
                     }
-                    /*curretbid用来记数*/
-                    extractInformation(govBaseUrl,dataList,govNewUrl, "政务信息", govBid);
                 }
-
-            }
-
-            // 连接企业信息的 URL 并解析页面内容
-            Document corpDoc = Jsoup.parse(new URL(corpBaseUrl), 30000);
-            String corpHtmlContent = corpDoc.html();
+                System.out.println(newHref);
+                try {// 连接政府信息的 URL 并解析页面内容
+                    Document govDoc = Jsoup.connect(newHref).timeout(30000).get(); // 增加连接超时时间为60秒
+                    String govHtmlContent = govDoc.html();
+                    // 使用正则表达式匹配createPage函数调用
+                    Pattern pattern = Pattern.compile("createPage\\((\\d+)");
+                    Matcher matcher = pattern.matcher(govHtmlContent);
+                    while (matcher.find()) {
+                        //是用来表示是企业还是政府govBid
+                        String param1 = matcher.group(1);
+                        // 将param1字符串转换为整数
+                        int param1Int = (Integer.parseInt(param1))-1;
+                        // 构建政府信息的新链接
+                        for (int i = 0; i <=param1Int; i++) {
+                            String govNewUrl;
+                            if (i == 0) {
+                                govNewUrl = newHref + "index.html"; // 当 i 为0时使用这个连接
+                            } else {
+                                govNewUrl = newHref + "index_" + i + ".html";
+                            }
+                            //curretbid用来记数
+                            extractInformation(newHref,dataList,govNewUrl, text, Bid);
+                        }
+                    }
+                    // 连接企业信息的 URL 并解析页面内容
+                    /*Document corpDoc = Jsoup.parse(new URL(corpBaseUrl), 30000);
+                    String corpHtmlContent = corpDoc.html();
 
             // 重新使用正则表达式匹配createPage函数调用
 
             Matcher matcher2 = pattern.matcher(corpHtmlContent);
 
             while (matcher2.find()) {
-                int corpBid= 1;
+                int corpBid= 2;
 
                 String param2 = matcher2.group(1);
                 int param2Int = (Integer.parseInt(param2))-1;
                 // 构建企业信息的新链接
                 for (int i = 0; i <=param2Int; i++) {
-                    /*corpBid表示是企业信息id*/
+                    //corpBid //表示是企业信息id
                     String corpNewUrl;
                     if (i == 0) {
                         corpNewUrl = corpBaseUrl + "index.html"; // 当 i 为0时使用这个连接
                     } else {
                         corpNewUrl = corpBaseUrl + "index_" + i + ".html";
                     }
-                    /*currentid用来及数字*/
+                    //currentid//用来及数字
                     extractInformation(corpBaseUrl,dataList,corpNewUrl, "企业信息", corpBid);
                 }
 
+            }*/
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                Bid++;
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -107,9 +137,10 @@ public class PressCentreSc {
         // 获取右侧标题
         String rightTitle = doc.select("div.right p.right-title").text();
         for (Element newsItem : newsItems) {
-
+            /*for 循环中的 newsItem 变量是用来代表 newsItems 中的每个元素，
+            使得可以在循环体内对每个新闻项进行操作，比如提取新闻内容或执行其他相关操作。
+            这个循环的作用是对多个新闻项进行相同或类似的处理，以便提取和处理网页中的多个新闻条目*/
             Cid++; // 递增成员变量Cid的值
-
             String title = newsItem.select("a.lf").text();
             String date = newsItem.select("span.rt").text();
             String relativeLink = newsItem.select("a.lf").attr("href");
@@ -186,7 +217,7 @@ public class PressCentreSc {
 
             //提取正文
             // 使用一个选择器来选择正文内容
-            Elements ccontentElements = articleDoc.select("div.view.TRS_UEDITOR.trs_paper_default.trs_web p, div.view.TRS_UEDITOR.trs_paper_default.trs_word p, div.zwxl-article div.view TRS_UEDITOR.trs_paper_default.trs_word p,div.view.TRS_UEDITOR.trs_paper_default.trs_external p");
+            Elements ccontentElements = articleDoc.select("div.view.TRS_UEDITOR.trs_paper_default.trs_web p, div.view.TRS_UEDITOR.trs_paper_default.trs_word p, div.zwxl-article span, div.view TRS_UEDITOR.trs_paper_default.trs_word p,div.view.TRS_UEDITOR.trs_paper_default.trs_external p,div.view.TRS_UEDITOR.trs_paper_default.trs_word p span");
             // 使用 StringBuilder 构建文本
             StringBuilder ccontentBuilder = new StringBuilder();
             for (Element contentElement : ccontentElements) {
